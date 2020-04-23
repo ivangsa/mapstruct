@@ -5,11 +5,18 @@
  */
 package org.mapstruct.ap.internal.model;
 
+import static org.mapstruct.ap.internal.model.common.Assignment.AssignmentType.DIRECT;
+import static org.mapstruct.ap.internal.prism.NullValuePropertyMappingStrategyPrism.SET_TO_DEFAULT;
+import static org.mapstruct.ap.internal.prism.NullValuePropertyMappingStrategyPrism.SET_TO_NULL;
+import static org.mapstruct.ap.internal.util.Collections.first;
+import static org.mapstruct.ap.internal.util.Collections.last;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 
@@ -47,12 +54,6 @@ import org.mapstruct.ap.internal.util.Strings;
 import org.mapstruct.ap.internal.util.ValueProvider;
 import org.mapstruct.ap.internal.util.accessor.Accessor;
 import org.mapstruct.ap.internal.util.accessor.AccessorType;
-
-import static org.mapstruct.ap.internal.model.common.Assignment.AssignmentType.DIRECT;
-import static org.mapstruct.ap.internal.prism.NullValuePropertyMappingStrategyPrism.SET_TO_DEFAULT;
-import static org.mapstruct.ap.internal.prism.NullValuePropertyMappingStrategyPrism.SET_TO_NULL;
-import static org.mapstruct.ap.internal.util.Collections.first;
-import static org.mapstruct.ap.internal.util.Collections.last;
 
 /**
  * Represents the mapping between a source and target property, e.g. from {@code String Source#foo} to
@@ -590,7 +591,7 @@ public class PropertyMapping extends ModelElement {
                 // TODO is first correct here?? shouldn't it be last since the remainer is checked
                 // in the forged method?
                 PropertyEntry propertyEntry = first( sourceReference.getPropertyEntries() );
-                if ( propertyEntry.getPresenceChecker() != null ) {
+                if (propertyEntry.getPresenceChecker() != null) {
                     sourcePresenceChecker = sourceParam.getName()
                         + "." + propertyEntry.getPresenceChecker().getSimpleName() + "()";
 
@@ -607,6 +608,12 @@ public class PropertyMapping extends ModelElement {
                             break;
                         }
                     }
+                }
+                if (propertyEntry.getType().getFullyQualifiedName().contains("java.util.Optional")) {
+                    sourcePresenceChecker = sourceParam.getName() + " != null && "
+                            + sourceParam.getName() + "."
+                            + propertyEntry.getReadAccessor().getSimpleName()
+                            + "().isPresent()";
                 }
             }
             return sourcePresenceChecker;

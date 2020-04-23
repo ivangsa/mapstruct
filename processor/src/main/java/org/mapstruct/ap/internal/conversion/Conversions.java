@@ -5,6 +5,8 @@
  */
 package org.mapstruct.ap.internal.conversion;
 
+import static org.mapstruct.ap.internal.conversion.ReverseConversion.reverse;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Time;
@@ -21,13 +23,13 @@ import java.util.Currency;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
 import javax.lang.model.util.Elements;
 
 import org.mapstruct.ap.internal.model.common.Type;
 import org.mapstruct.ap.internal.model.common.TypeFactory;
 import org.mapstruct.ap.internal.util.JodaTimeConstants;
-
-import static org.mapstruct.ap.internal.conversion.ReverseConversion.reverse;
 
 /**
  * Holds built-in {@link ConversionProvider}s such as from {@code int} to {@code String}.
@@ -190,6 +192,10 @@ public class Conversions {
 
         // java.util.Currency <~> String
         register( Currency.class, String.class, new CurrencyToStringConversion() );
+
+        // java.util.Optional<T> <~> T
+        register(Optional.class, Object.class, new JavaOptionalToObjectConversion());
+        register(Object.class, Optional.class, new JavaObjectToOptionalConversion());
     }
 
     private void registerJodaConversions() {
@@ -300,6 +306,17 @@ public class Conversions {
         }
         else if ( targetType.isEnumType() && sourceType.equals( stringType ) ) {
             targetType = enumType;
+        }
+        // if (sourceType.getFullyQualifiedName().contains("java.util.Optional")
+        // || targetType.getFullyQualifiedName().contains("java.util.Optional")) {
+        // System.out.println("getConversion " + sourceType + " " + targetType);
+        // System.out.println("conversor " + conversions.get(new Key(sourceType, targetType)));
+        // }
+        if (sourceType.getFullyQualifiedName().contains("java.util.Optional")) {
+            return new JavaOptionalToObjectConversion();
+        }
+        if (targetType.getFullyQualifiedName().contains("java.util.Optional")) {
+            return new JavaObjectToOptionalConversion();
         }
 
         return conversions.get( new Key( sourceType, targetType ) );
