@@ -72,6 +72,7 @@ public class PropertyMapping extends ModelElement {
     private final Assignment assignment;
     private final Set<String> dependsOn;
     private final Assignment defaultValueAssignment;
+    private final boolean constructorMapping;
 
     @SuppressWarnings("unchecked")
     private static class MappingBuilderBase<T extends MappingBuilderBase<T>> extends AbstractBaseBuilder<T> {
@@ -128,7 +129,7 @@ public class PropertyMapping extends ModelElement {
         }
 
         protected boolean isFieldAssignment() {
-            return targetWriteAccessorType == AccessorType.FIELD;
+            return targetWriteAccessorType.isFieldAssignment();
         }
     }
 
@@ -275,12 +276,13 @@ public class PropertyMapping extends ModelElement {
             return new PropertyMapping(
                 targetPropertyName,
                 rightHandSide.getSourceParameterName(),
-                targetWriteAccessor.getSimpleName().toString(),
+                targetWriteAccessor.getSimpleName(),
                 ValueProvider.of( targetReadAccessor ),
                 targetType,
                 assignment,
                 dependsOn,
-                getDefaultValueAssignment( assignment )
+                getDefaultValueAssignment( assignment ),
+                targetWriteAccessorType == AccessorType.PARAMETER
             );
         }
 
@@ -378,7 +380,7 @@ public class PropertyMapping extends ModelElement {
 
             Assignment result;
 
-            if ( targetAccessorType == AccessorType.SETTER || targetAccessorType == AccessorType.FIELD ) {
+            if ( targetAccessorType == AccessorType.SETTER || targetAccessorType.isFieldAssignment() ) {
                 result = assignToPlainViaSetter( targetType, rightHandSide );
             }
             else {
@@ -475,6 +477,7 @@ public class PropertyMapping extends ModelElement {
         private Assignment assignToArray(Type targetType, Assignment rightHandSide) {
 
             Type arrayType = ctx.getTypeFactory().getType( Arrays.class );
+            //TODO init default value
             return new ArrayCopyWrapper(
                 rightHandSide,
                 targetPropertyName,
@@ -822,7 +825,7 @@ public class PropertyMapping extends ModelElement {
             if ( assignment != null ) {
 
                 if ( targetWriteAccessor.getAccessorType() == AccessorType.SETTER  ||
-                targetWriteAccessor.getAccessorType() == AccessorType.FIELD ) {
+                targetWriteAccessor.getAccessorType().isFieldAssignment() ) {
 
                     // target accessor is setter, so decorate assignment as setter
                     if ( assignment.isCallingUpdateMethod() ) {
@@ -888,12 +891,13 @@ public class PropertyMapping extends ModelElement {
 
             return new PropertyMapping(
                 targetPropertyName,
-                targetWriteAccessor.getSimpleName().toString(),
+                targetWriteAccessor.getSimpleName(),
                 ValueProvider.of( targetReadAccessor ),
                 targetType,
                 assignment,
                 dependsOn,
-                null
+                null,
+                targetWriteAccessorType == AccessorType.PARAMETER
             );
         }
 
@@ -938,7 +942,7 @@ public class PropertyMapping extends ModelElement {
             Assignment assignment = new SourceRHS( javaExpression, null, existingVariableNames, "" );
 
             if ( targetWriteAccessor.getAccessorType() == AccessorType.SETTER  ||
-                            targetWriteAccessor.getAccessorType() == AccessorType.FIELD ) {
+                            targetWriteAccessor.getAccessorType().isFieldAssignment() ) {
                 // setter, so wrap in setter
                 assignment = new SetterWrapper( assignment, method.getThrownTypes(), isFieldAssignment() );
             }
@@ -953,12 +957,13 @@ public class PropertyMapping extends ModelElement {
 
             return new PropertyMapping(
                 targetPropertyName,
-                targetWriteAccessor.getSimpleName().toString(),
+                targetWriteAccessor.getSimpleName(),
                 ValueProvider.of( targetReadAccessor ),
                 targetType,
                 assignment,
                 dependsOn,
-                null
+                null,
+                targetWriteAccessorType == AccessorType.PARAMETER
             );
         }
 
@@ -966,18 +971,19 @@ public class PropertyMapping extends ModelElement {
 
     // Constructor for creating mappings of constant expressions.
     private PropertyMapping(String name, String targetWriteAccessorName,
-                            ValueProvider targetReadAccessorProvider,
-                            Type targetType, Assignment propertyAssignment,
-                            Set<String> dependsOn, Assignment defaultValueAssignment ) {
+        ValueProvider targetReadAccessorProvider,
+        Type targetType, Assignment propertyAssignment,
+        Set<String> dependsOn, Assignment defaultValueAssignment, boolean constructorMapping) {
         this( name, null, targetWriteAccessorName, targetReadAccessorProvider,
-            targetType, propertyAssignment, dependsOn, defaultValueAssignment
+            targetType, propertyAssignment, dependsOn, defaultValueAssignment,
+            constructorMapping
         );
     }
 
     private PropertyMapping(String name, String sourceBeanName, String targetWriteAccessorName,
-                            ValueProvider targetReadAccessorProvider, Type targetType,
-                            Assignment assignment,
-        Set<String> dependsOn, Assignment defaultValueAssignment) {
+        ValueProvider targetReadAccessorProvider, Type targetType,
+        Assignment assignment,
+        Set<String> dependsOn, Assignment defaultValueAssignment, boolean constructorMapping) {
         this.name = name;
         this.sourceBeanName = sourceBeanName;
         this.targetWriteAccessorName = targetWriteAccessorName;
@@ -987,6 +993,7 @@ public class PropertyMapping extends ModelElement {
         this.assignment = assignment;
         this.dependsOn = dependsOn != null ? dependsOn : Collections.<String>emptySet();
         this.defaultValueAssignment = defaultValueAssignment;
+        this.constructorMapping = constructorMapping;
     }
 
     /**
@@ -1018,6 +1025,10 @@ public class PropertyMapping extends ModelElement {
 
     public Assignment getDefaultValueAssignment() {
         return defaultValueAssignment;
+    }
+
+    public boolean isConstructorMapping() {
+        return constructorMapping;
     }
 
     @Override
