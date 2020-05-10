@@ -14,6 +14,7 @@ import org.junit.runner.RunWith;
 import org.mapstruct.ap.internal.util.Collections;
 import org.mapstruct.ap.testutil.IssueKey;
 import org.mapstruct.ap.testutil.WithClasses;
+import org.mapstruct.ap.testutil.WithServiceImplementation;
 import org.mapstruct.ap.testutil.runner.AnnotationProcessorTestRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @WithClasses({ OptionalMapper.class, SomeMapper.class, SourceWithOptional.class, TargetWithPlainValues.class })
 @IssueKey("674")
 @RunWith(AnnotationProcessorTestRunner.class)
+@WithServiceImplementation(CustomAccessorNamingStrategy.class)
 public class OptionalConversionTest {
 
     @Test

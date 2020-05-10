@@ -7,11 +7,13 @@ package org.mapstruct.ap.internal.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -23,6 +25,7 @@ import javax.lang.model.util.Types;
 
 import org.mapstruct.ap.internal.util.accessor.Accessor;
 import org.mapstruct.ap.internal.util.accessor.ExecutableElementAccessor;
+import org.mapstruct.ap.internal.util.accessor.NestedExecutableElementAccessor;
 import org.mapstruct.ap.internal.util.accessor.VariableElementAccessor;
 
 import static org.mapstruct.ap.internal.util.Collections.first;
@@ -118,6 +121,18 @@ public class Filters {
             .filter( accessorNaming::isPresenceCheckMethod )
             .map( method -> new ExecutableElementAccessor( method, getReturnType( method ), PRESENCE_CHECKER ) )
             .collect( Collectors.toCollection( LinkedList::new ) );
+    }
+    
+    public Map<ExecutableElement, Accessor> presenceCheckMethodsFor(List<ExecutableElement> elements) {
+        Map<ExecutableElement, Accessor> presenceCheckMethods = new HashMap<>();
+        for (ExecutableElement element : elements) {
+            ExecutableElement presenceChecker = accessorNaming.findPresenceCheckMethodFor(element);
+            if (presenceChecker != null) {
+                presenceCheckMethods.put(element,
+                        new NestedExecutableElementAccessor(presenceChecker, element.asType()));
+            }
+        }
+        return presenceCheckMethods;
     }
 
     public List<Accessor> setterMethodsIn(List<ExecutableElement> elements) {
