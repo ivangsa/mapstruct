@@ -39,10 +39,10 @@ public interface AccessorNamingStrategy {
      * Returns the simple name of a method in given type to be used as presence check.
      * 
      * For instance for type {@code java.util.Optional} you may want to return 'isPresent'.
-     * @param type
+     * @param typeName the java fully qualified type name
      * @return the presence checker method simple name or {@code null}
      */
-    default String getPresenceCheckerMethodInType(String type) {
+    default String getPresenceCheckerMethodInType(String typeName) {
         return null;
     }
 
